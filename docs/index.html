@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trainings-Dashboard</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #f7f6f3;
+    color: #0b0b0b;
+    margin: 0;
+    padding: 2rem 1.5rem 4rem;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 500; margin: 0 0 4px; }
+  .sub { font-size: 14px; color: #6b6a66; margin: 0 0 2rem; }
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 2rem;
+  }
+  .kpi { background: #fff; border: 0.5px solid #e1e0d9; border-radius: 10px; padding: 1rem; }
+  .kpi p:first-child { font-size: 13px; color: #6b6a66; margin: 0 0 4px; }
+  .kpi p:last-child { font-size: 24px; font-weight: 500; margin: 0; }
+  h2 { font-size: 15px; font-weight: 500; margin: 0 0 8px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 8px; font-size: 12px; color: #6b6a66; }
+  .legend span { display: flex; align-items: center; gap: 4px; }
+  .dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .chart-box { position: relative; width: 100%; height: 220px; margin-bottom: 2.5rem; background: #fff; border: 0.5px solid #e1e0d9; border-radius: 10px; padding: 1rem; }
+  .chart-box.short { height: 200px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
+  footer { font-size: 12px; color: #9a998f; margin-top: 2rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Trainings-Dashboard</h1>
+  <p class="sub">Garmin Connect Export &middot; 07-06 – 08-04 &middot; zuletzt aktualisiert 04.08.2026 20:07</p>
+
+  <div class="kpis">
+    <div class="kpi"><p>Ø Schritte/Tag</p><p>10.510</p></div>
+    <div class="kpi"><p>Ø Ruhepuls</p><p>50.4 bpm</p></div>
+    <div class="kpi"><p>Ø Schlaf</p><p>7,65 h</p></div>
+    <div class="kpi"><p>Ø HRV</p><p>61.0 ms</p></div>
+    <div class="kpi"><p>Trainings</p><p>26</p></div>
+  </div>
+
+  <h2>Schritte pro Tag</h2>
+  <div class="chart-box short"><canvas id="stepsChart"></canvas></div>
+
+  <h2>Ruhepuls und HRV</h2>
+  <div class="legend">
+    <span><span class="dot" style="background:#2a78d6"></span>Ruhepuls (bpm)</span>
+    <span><span class="dot" style="background:#1baf7a"></span>HRV nachts (ms)</span>
+  </div>
+  <div class="chart-box"><canvas id="hrChart"></canvas></div>
+
+  <h2>Schlafzusammensetzung</h2>
+  <div class="legend">
+    <span><span class="dot" style="background:#4a3aa7"></span>Tiefschlaf</span>
+    <span><span class="dot" style="background:#2a78d6"></span>Leichtschlaf</span>
+    <span><span class="dot" style="background:#1baf7a"></span>REM-Schlaf</span>
+  </div>
+  <div class="chart-box"><canvas id="sleepChart"></canvas></div>
+
+  <div class="row">
+    <div>
+      <h2>Trainingsverteilung</h2>
+      <div class="chart-box short"><canvas id="typeChart"></canvas></div>
+    </div>
+    <div>
+      <h2>Lauftempo (min/km)</h2>
+      <div class="chart-box short"><canvas id="paceChart"></canvas></div>
+    </div>
+  </div>
+
+  <footer>Erstellt aus deinem Garmin-Connect-Export. Alle Daten werden lokal im Browser gerendert, nichts wird hochgeladen.</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const dates = ["07-06", "07-07", "07-08", "07-09", "07-10", "07-11", "07-12", "07-13", "07-14", "07-15", "07-16", "07-17", "07-18", "07-19", "07-20", "07-21", "07-22", "07-23", "07-24", "07-25", "07-26", "07-27", "07-28", "07-29", "07-30", "07-31", "08-01", "08-02", "08-03", "08-04"];
+const steps = [8715, 6878, 19209, 11665, 9818, 21251, 10729, 7019, 13425, 7407, 4224, 18429, 4740, 7103, 8216, 6678, 10010, 13629, 9782, 12091, 14239, 6424, 11890, 11100, 8319, 9342, 14146, 6201, 8793, 13826];
+const rhr = [50, 46, 50, 49, 54, 52, 52, 51, 48, 52, 51, 48, 54, 51, 50, 48, 49, 49, 54, 51, 51, 50, 49, 49, 52, 50, 50, 50, 51, 50];
+const hrv = [55.0, 55.0, 71.0, 76.0, 48.0, 47.0, 40.0, 40.0, 64.0, 55.0, 69.0, 77.0, 52.0, 55.0, 77.0, 66.0, 68.0, 70.0, 48.0, 69.0, 68.0, 55.0, 62.0, 74.0, 48.0, 51.0, 66.0, 73.0, 64.0, 67.0];
+const deep = [1.75, 0.73, 0.82, 1.0, 1.72, 2.18, 1.88, 1.5, 0.68, 0.83, 0.98, 1.27, 0.7, 1.0, 1.17, 1.88, 0.92, 1.22, 0.32, 1.13, 1.13, 1.35, 2.02, 0.77, 1.12, 1.08, 0.85, 1.47, 0.63, 1.08];
+const light = [4.28, 4.43, 5.58, 4.68, 4.6, 3.38, 3.47, 3.77, 6.48, 5.95, 5.4, 4.55, 5.4, 4.07, 4.2, 4.28, 5.22, 5.93, 5.08, 6.35, 4.05, 5.17, 3.92, 5.62, 5.35, 4.53, 5.32, 5.53, 5.17, 5.83];
+const rem = [2.08, 1.63, 1.88, 1.75, 1.23, 0.78, 1.35, 1.62, 2.07, 1.83, 1.75, 0.57, 1.32, 1.42, 1.62, 2.42, 1.57, 1.52, 0.18, 1.92, 1.38, 1.77, 1.48, 1.77, 0.95, 1.57, 1.85, 1.87, 1.8, 1.73];
+const typeLabels = ["Krafttraining", "Laufen", "HIIT", "Padel"];
+const typeCounts = [16, 8, 1, 1];
+const typeColors = ["#2a78d6", "#eb6834", "#eda100", "#e87ba4"];
+const runDates = ["07-08", "07-11", "07-14", "07-23", "07-26", "07-28", "08-01", "08-04"];
+const pace = [6.07, 5.7, 6.23, 5.12, 7.83, 5.53, 5.35, 7.89];
+
+Chart.defaults.font.family = "system-ui, -apple-system, sans-serif";
+Chart.defaults.color = '#6b6a66';
+const gridColor = '#e1e0d9';
+
+new Chart(document.getElementById('stepsChart'), {
+  type: 'bar',
+  data: { labels: dates, datasets: [{ data: steps, backgroundColor: '#2a78d6', borderRadius: 4, maxBarThickness: 16 }] },
+  options: { responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } },
+      y: { grid: { color: gridColor } }
+    }
+  }
+});
+
+new Chart(document.getElementById('hrChart'), {
+  type: 'line',
+  data: { labels: dates, datasets: [
+    { label: 'Ruhepuls', data: rhr, borderColor: '#2a78d6', pointRadius: 0, borderWidth: 2, tension: 0.3 },
+    { label: 'HRV', data: hrv, borderColor: '#1baf7a', pointRadius: 0, borderWidth: 2, tension: 0.3, borderDash: [5,3] }
+  ]},
+  options: { responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } },
+      y: { grid: { color: gridColor } }
+    }
+  }
+});
+
+new Chart(document.getElementById('sleepChart'), {
+  type: 'line',
+  data: { labels: dates, datasets: [
+    { label: 'Tiefschlaf', data: deep, borderColor: '#4a3aa7', backgroundColor: '#4a3aa71a', fill: true, pointRadius: 0, borderWidth: 1, stack: 's' },
+    { label: 'Leichtschlaf', data: light, borderColor: '#2a78d6', backgroundColor: '#2a78d61a', fill: true, pointRadius: 0, borderWidth: 1, stack: 's' },
+    { label: 'REM', data: rem, borderColor: '#1baf7a', backgroundColor: '#1baf7a1a', fill: true, pointRadius: 0, borderWidth: 1, stack: 's' }
+  ]},
+  options: { responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { stacked: true, grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } },
+      y: { stacked: true, grid: { color: gridColor }, title: { display: true, text: 'Stunden' } }
+    }
+  }
+});
+
+new Chart(document.getElementById('typeChart'), {
+  type: 'doughnut',
+  data: { labels: typeLabels, datasets: [{
+    data: typeCounts,
+    backgroundColor: typeColors,
+    borderColor: '#fff', borderWidth: 2
+  }] },
+  options: { responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 12 } } } }
+  }
+});
+
+new Chart(document.getElementById('paceChart'), {
+  type: 'line',
+  data: { labels: runDates, datasets: [{ data: pace, borderColor: '#eb6834', pointRadius: 4, pointBackgroundColor: '#eb6834', borderWidth: 2, tension: 0.2 }] },
+  options: { responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: gridColor }, title: { display: true, text: 'min/km' } }
+    }
+  }
+});
+</script>
+</body>
+</html>
