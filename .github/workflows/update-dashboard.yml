@@ -1,0 +1,41 @@
+name: Update Garmin Dashboard
+
+on:
+  schedule:
+    # Läuft täglich um 05:00 UTC (= 06:00 oder 07:00 deutscher Zeit, je nach Sommer-/Winterzeit)
+    - cron: "0 5 * * *"
+  workflow_dispatch: {}
+    # Erlaubt zusätzlich manuelles Starten über den "Run workflow"-Button auf GitHub
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repo auschecken
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Abhängigkeiten installieren
+        run: pip install -r requirements.txt
+
+      - name: Garmin-Daten exportieren
+        env:
+          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+        run: python garmin_export.py --days 30 --out garmin_data
+
+      - name: Dashboard neu aufbauen
+        run: python build_dashboard.py --days 30 --data-dir garmin_data --out docs/index.html
+
+      - name: Änderungen committen
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Dashboard automatisch aktualisiert"
+          file_pattern: "docs/index.html"
