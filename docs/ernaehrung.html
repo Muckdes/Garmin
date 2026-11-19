@@ -141,12 +141,13 @@
     <details id="tokenBox">
       <summary id="tokenSummary">Speichern einrichten (GitHub-Token)</summary>
       <p style="font-size:13px;color:#3d3d3a;line-height:1.5;">Deine Einträge werden als Datei <code>data/ernaehrung.csv</code> direkt in dein GitHub-Repo geschrieben. Dafür braucht diese Seite einmalig pro Gerät einen Token, der nur auf dieses eine Repo schreiben darf. Er bleibt nur in diesem Browser gespeichert.</p>
+      <p style="font-size:13px;color:#3d3d3a;line-height:1.5;">Am schnellsten über diesen <a href="https://github.com/settings/personal-access-tokens/new?name=Ernaehrung%20Dashboard&amp;target_name=Muckdes&amp;expires_in=365&amp;contents=write" target="_blank" rel="noopener">vorausgefüllten Link</a> (dann nur noch Schritt 3 und 5). Oder von Hand:</p>
       <ol>
         <li>Auf github.com: Profilbild → <b>Settings</b> → <b>Developer settings</b> → <b>Personal access tokens</b> → <b>Fine-grained tokens</b> → <b>Generate new token</b></li>
         <li>Name z. B. „Ernährung Dashboard“, Ablauf nach Wunsch (z. B. 1 Jahr)</li>
-        <li><b>Repository access</b>: „Only select repositories“ → <b>Garmin</b></li>
-        <li><b>Permissions</b> → Repository permissions → <b>Contents</b>: „Read and write“</li>
-        <li>Token erzeugen, kopieren und hier einfügen</li>
+        <li><b>Repository access</b>: „Only select repositories“ → <b>Garmin</b> auswählen</li>
+        <li>Bei <b>Permissions</b> auf <b>„+ Add permissions“</b> klicken, <b>Contents</b> anhaken, dann daneben von „Read-only“ auf <b>„Read and write“</b> umstellen</li>
+        <li><b>Generate token</b>, Token kopieren und hier einfügen</li>
       </ol>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <input type="password" id="sToken" placeholder="github_pat_…" style="flex:1;min-width:220px;">
