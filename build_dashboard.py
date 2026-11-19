@@ -45,12 +45,16 @@ TEMPLATE = """<!DOCTYPE html>
   .row {{ display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }}
   @media (max-width: 600px) {{ .row {{ grid-template-columns: 1fr; }} }}
   footer {{ font-size: 12px; color: #9a998f; margin-top: 2rem; }}
+  .nav {{ display: flex; gap: 6px; margin: -1rem 0 2rem; }}
+  .nav a {{ font-size: 13px; padding: 6px 12px; border-radius: 999px; border: 0.5px solid #e1e0d9; background: #fff; color: #0b0b0b; text-decoration: none; }}
+  .nav a.active {{ background: #0b0b0b; color: #fff; border-color: #0b0b0b; }}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Trainings-Dashboard</h1>
   <p class="sub">Garmin Connect Export &middot; {date_range} &middot; zuletzt aktualisiert {generated_at}</p>
+  <nav class="nav"><a class="active" href="index.html">Training</a><a href="ernaehrung.html">Ernährung &amp; Gewicht</a></nav>
 
   <div class="kpis">
     <div class="kpi"><p>Ø Schritte/Tag</p><p>{avg_steps}</p></div>

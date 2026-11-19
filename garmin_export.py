@@ -23,6 +23,7 @@ Nutzung:
 """
 
 import argparse
+import csv
 import getpass
 import json
 import os
@@ -104,10 +105,65 @@ def export_daily_health(client: Garmin, days: int, out_dir: str):
     print(f"Gesundheitsdaten für {days} Tage gespeichert -> {path}")
 
 
+KCAL_FIELDS = ["datum", "gesamt_kcal", "aktiv_kcal", "grundumsatz_kcal"]
+
+
+def export_daily_calories(client: Garmin, days: int, csv_path: str, refresh_days: int = 3):
+    """
+    Schreibt den täglichen Kalorienverbrauch laut Garmin fortlaufend in eine CSV.
+    Die Datei wächst mit jedem Lauf (Historie bleibt erhalten), damit die
+    Umsatzschätzung auf der Seite 'Ernährung & Gewicht' auch über mehr als
+    30 Tage rechnen kann.
+
+    - Heute wird ausgelassen (Tag ist noch nicht vorbei).
+    - Tage, die schon in der CSV stehen, werden nicht erneut abgefragt,
+      außer den letzten `refresh_days` Tagen (Garmin synchronisiert manchmal nach).
+    """
+    existing = {}
+    if os.path.exists(csv_path):
+        with open(csv_path, encoding="utf-8", newline="") as f:
+            for row in csv.DictReader(f):
+                if row.get("datum"):
+                    existing[row["datum"]] = row
+
+    fetched = 0
+    for i in range(1, days + 1):
+        day = (date.today() - timedelta(days=i)).isoformat()
+        if day in existing and i > refresh_days:
+            continue
+        try:
+            s = client.get_stats(day) or {}
+        except Exception as e:
+            print(f"Kalorien für {day} nicht abrufbar: {e}")
+            continue
+        total = s.get("totalKilocalories")
+        if not total:
+            continue  # Tag ohne Daten (z. B. Uhr nicht getragen / nicht synchronisiert)
+        existing[day] = {
+            "datum": day,
+            "gesamt_kcal": round(total),
+            "aktiv_kcal": round(s.get("activeKilocalories") or 0),
+            "grundumsatz_kcal": round(s.get("bmrKilocalories") or 0),
+        }
+        fetched += 1
+
+    out_dir = os.path.dirname(csv_path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+    with open(csv_path, "w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=KCAL_FIELDS)
+        writer.writeheader()
+        for day in sorted(existing):
+            writer.writerow({k: existing[day].get(k, "") for k in KCAL_FIELDS})
+    print(f"Kalorien: {fetched} Tage abgerufen, {len(existing)} Tage gesamt -> {csv_path}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Garmin Connect Datenexport")
     parser.add_argument("--days", type=int, default=30, help="Anzahl Tage rückwirkend")
     parser.add_argument("--out", default="garmin_data", help="Ausgabeverzeichnis")
+    parser.add_argument("--kcal-csv", default="data/garmin_kalorien.csv",
+                        help="Fortlaufende CSV mit dem täglichen Kalorienverbrauch")
     args = parser.parse_args()
 
     os.makedirs(args.out, exist_ok=True)
@@ -115,6 +171,7 @@ def main():
 
     export_activities(client, args.days, args.out)
     export_daily_health(client, args.days, args.out)
+    export_daily_calories(client, args.days, args.kcal_csv)
 
     print("\nFertig! Du kannst die JSON-Dateien im Ordner jetzt bei Claude hochladen.")
 
