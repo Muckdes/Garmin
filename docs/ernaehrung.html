@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ernährung &amp; Gewicht</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #f7f6f3;
+    color: #0b0b0b;
+    margin: 0;
+    padding: 2rem 1.5rem 4rem;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 500; margin: 0 0 4px; }
+  .sub { font-size: 14px; color: #6b6a66; margin: 0 0 2rem; }
+  .nav { display: flex; gap: 6px; margin: -1rem 0 2rem; }
+  .nav a { font-size: 13px; padding: 6px 12px; border-radius: 999px; border: 0.5px solid #e1e0d9; background: #fff; color: #0b0b0b; text-decoration: none; }
+  .nav a.active { background: #0b0b0b; color: #fff; border-color: #0b0b0b; }
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 1rem;
+  }
+  .kpi { background: #fff; border: 0.5px solid #e1e0d9; border-radius: 10px; padding: 1rem; }
+  .kpi .label { font-size: 13px; color: #6b6a66; margin: 0 0 4px; }
+  .kpi .value { font-size: 24px; font-weight: 500; margin: 0; }
+  .kpi .hint { font-size: 12px; color: #9a998f; margin: 4px 0 0; }
+  .kpi.main { border-color: #0b0b0b; }
+  h2 { font-size: 15px; font-weight: 500; margin: 0 0 8px; }
+  .card { background: #fff; border: 0.5px solid #e1e0d9; border-radius: 10px; padding: 1rem; margin-bottom: 2rem; }
+  .status { font-size: 14px; line-height: 1.5; margin-bottom: 2rem; padding: 0.8rem 1rem; border-radius: 10px; background: #fff; border: 0.5px solid #e1e0d9; border-left: 3px solid #9a998f; }
+  .status.ok { border-left-color: #1baf7a; }
+  .status.warn { border-left-color: #eda100; }
+  .status.bad { border-left-color: #e34948; }
+  .status p { margin: 0 0 4px; }
+  .status p:last-child { margin: 0; }
+  form.entry { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; align-items: end; }
+  label { display: block; font-size: 13px; color: #6b6a66; margin-bottom: 4px; }
+  input, select {
+    width: 100%; font: inherit; font-size: 15px; padding: 8px 10px;
+    border: 0.5px solid #c9c8c0; border-radius: 8px; background: #fff; color: #0b0b0b;
+  }
+  button {
+    font: inherit; font-size: 14px; padding: 9px 14px; border-radius: 8px; cursor: pointer;
+    border: 0.5px solid #0b0b0b; background: #0b0b0b; color: #fff;
+  }
+  button.ghost { background: #fff; color: #0b0b0b; border-color: #c9c8c0; }
+  button.small { font-size: 12px; padding: 4px 8px; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .msg { font-size: 13px; margin-top: 10px; min-height: 1em; color: #6b6a66; }
+  .msg.err { color: #e34948; }
+  .msg.ok { color: #1baf7a; }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 8px; font-size: 12px; color: #6b6a66; }
+  .legend span { display: flex; align-items: center; gap: 4px; }
+  .dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .chart-box { position: relative; width: 100%; height: 240px; margin-bottom: 2.5rem; background: #fff; border: 0.5px solid #e1e0d9; border-radius: 10px; padding: 1rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: right; padding: 6px 8px; border-bottom: 0.5px solid #e1e0d9; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { font-weight: 500; color: #6b6a66; }
+  td.muted { color: #9a998f; }
+  .table-wrap { overflow-x: auto; }
+  details summary { cursor: pointer; font-size: 14px; }
+  details ol { font-size: 13px; line-height: 1.6; color: #3d3d3a; padding-left: 1.2rem; }
+  .settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 1rem; }
+  .row-actions { display: flex; gap: 4px; justify-content: flex-end; }
+  footer { font-size: 12px; color: #9a998f; margin-top: 2rem; line-height: 1.5; }
+  .banner { font-size: 13px; padding: 8px 12px; border-radius: 8px; background: #fff7e0; border: 0.5px solid #eda100; margin-bottom: 1.5rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Ernährung &amp; Gewicht</h1>
+  <p class="sub" id="sub">Lade Daten …</p>
+  <nav class="nav"><a href="index.html">Training</a><a class="active" href="ernaehrung.html">Ernährung &amp; Gewicht</a></nav>
+
+  <div id="demoBanner" class="banner" hidden>Demo-Modus: Es werden erfundene Beispieldaten angezeigt, nichts wird gespeichert.</div>
+
+  <div class="kpis">
+    <div class="kpi main"><p class="label">Dein Umsatz (gemessen)</p><p class="value" id="kTdee">–</p><p class="hint" id="kTdeeHint"></p></div>
+    <div class="kpi main"><p class="label">Zielkalorien pro Tag</p><p class="value" id="kTarget">–</p><p class="hint" id="kTargetHint"></p></div>
+    <div class="kpi"><p class="label">Trendgewicht</p><p class="value" id="kTrend">–</p><p class="hint" id="kTrendHint"></p></div>
+    <div class="kpi"><p class="label">Veränderung pro Monat</p><p class="value" id="kRate">–</p><p class="hint" id="kRateHint"></p></div>
+    <div class="kpi"><p class="label">Ø gegessen</p><p class="value" id="kIntake">–</p><p class="hint" id="kIntakeHint"></p></div>
+    <div class="kpi"><p class="label">Ø Verbrauch laut Garmin</p><p class="value" id="kGarmin">–</p><p class="hint" id="kGarminHint"></p></div>
+    <div class="kpi"><p class="label">Garmin liegt daneben um</p><p class="value" id="kFactor">–</p><p class="hint" id="kFactorHint"></p></div>
+    <div class="kpi"><p class="label">Grundumsatz laut Garmin</p><p class="value" id="kBmr">–</p><p class="hint">nur Ruheverbrauch, ohne Bewegung</p></div>
+  </div>
+
+  <div class="status" id="status"><p>Lade Daten …</p></div>
+
+  <h2>Eintragen</h2>
+  <div class="card">
+    <form class="entry" id="entryForm" autocomplete="off">
+      <div><label for="fDate">Datum</label><input type="date" id="fDate" required></div>
+      <div><label for="fWeight">Gewicht (kg)</label><input type="text" inputmode="decimal" id="fWeight" placeholder="z. B. 82,4"></div>
+      <div><label for="fKcal">Gegessen (kcal)</label><input type="text" inputmode="numeric" id="fKcal" placeholder="z. B. 2650"></div>
+      <div><button type="submit" id="fSave">Speichern</button></div>
+    </form>
+    <div class="msg" id="formMsg"></div>
+    <p class="hint" style="font-size:12px;color:#9a998f;margin:6px 0 0;">Du kannst Gewicht und Kalorien auch getrennt eintragen (morgens wiegen, abends Kalorien). Leere Felder lassen den bisherigen Wert stehen.</p>
+  </div>
+
+  <h2>Gewicht</h2>
+  <div class="legend">
+    <span><span class="dot" style="background:#9a998f"></span>Tageswert</span>
+    <span><span class="dot" style="background:#2a78d6"></span>Trend (geglättet)</span>
+  </div>
+  <div class="chart-box"><canvas id="weightChart"></canvas></div>
+
+  <h2>Kalorien</h2>
+  <div class="legend">
+    <span><span class="dot" style="background:#eda10066;border:1px solid #eda100"></span>Gegessen</span>
+    <span><span class="dot" style="background:#9a998f"></span>Verbrauch laut Garmin</span>
+    <span><span class="dot" style="background:#1baf7a"></span>Dein Umsatz (gemessen)</span>
+    <span><span class="dot" style="background:#0b0b0b"></span>Zielkalorien</span>
+  </div>
+  <div class="chart-box"><canvas id="kcalChart"></canvas></div>
+
+  <h2>Letzte Tage</h2>
+  <div class="card table-wrap">
+    <table>
+      <thead><tr><th>Datum</th><th>Gewicht</th><th>Trend</th><th>Gegessen</th><th>Garmin</th><th>Differenz</th><th></th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <h2>Einstellungen</h2>
+  <div class="card">
+    <div class="settings">
+      <div><label for="sSurplus">Kalorienplus (kcal/Tag)</label><input type="number" id="sSurplus" step="25" min="-1000" max="1000"></div>
+      <div><label for="sWindow">Berechnungszeitraum</label>
+        <select id="sWindow"><option value="14">14 Tage</option><option value="21">21 Tage</option><option value="28">28 Tage</option></select></div>
+      <div><label for="sRateMin">Zielzunahme min. (kg/Monat)</label><input type="text" inputmode="decimal" id="sRateMin"></div>
+      <div><label for="sRateMax">Zielzunahme max. (kg/Monat)</label><input type="text" inputmode="decimal" id="sRateMax"></div>
+    </div>
+    <details id="tokenBox">
+      <summary id="tokenSummary">Speichern einrichten (GitHub-Token)</summary>
+      <p style="font-size:13px;color:#3d3d3a;line-height:1.5;">Deine Einträge werden als Datei <code>data/ernaehrung.csv</code> direkt in dein GitHub-Repo geschrieben. Dafür braucht diese Seite einmalig pro Gerät einen Token, der nur auf dieses eine Repo schreiben darf. Er bleibt nur in diesem Browser gespeichert.</p>
+      <ol>
+        <li>Auf github.com: Profilbild → <b>Settings</b> → <b>Developer settings</b> → <b>Personal access tokens</b> → <b>Fine-grained tokens</b> → <b>Generate new token</b></li>
+        <li>Name z. B. „Ernährung Dashboard“, Ablauf nach Wunsch (z. B. 1 Jahr)</li>
+        <li><b>Repository access</b>: „Only select repositories“ → <b>Garmin</b></li>
+        <li><b>Permissions</b> → Repository permissions → <b>Contents</b>: „Read and write“</li>
+        <li>Token erzeugen, kopieren und hier einfügen</li>
+      </ol>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input type="password" id="sToken" placeholder="github_pat_…" style="flex:1;min-width:220px;">
+        <button type="button" id="sTokenSave">Token speichern</button>
+        <button type="button" class="ghost" id="sTokenDel">Token entfernen</button>
+      </div>
+      <div class="msg" id="tokenMsg"></div>
+    </details>
+  </div>
+
+  <footer>
+    <b>So wird gerechnet:</b> Dein Umsatz = Ø gegessene Kalorien − Gewichtsveränderung × 7.700 kcal/kg, über den gewählten Zeitraum.
+    Die Gewichtsveränderung kommt aus einer Ausgleichsgeraden durch alle Wiegungen im Zeitraum, damit einzelne Ausreißer (Wasser, Salz, Kohlenhydrate) kaum ins Gewicht fallen.
+    Ab 7 Tagen mit Daten gibt es einen vorläufigen Wert, ab 14 Tagen einen belastbaren.
+    Garmin-Werte werden täglich um ca. 6 Uhr automatisch übernommen (immer bis gestern).
+    Hinweis: Das Repo und diese Seite sind öffentlich – die Werte sind für jeden mit dem Link sichtbar.
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+// ---------------------------------------------------------------------------
+// Konfiguration
+// ---------------------------------------------------------------------------
+const REPO = 'Muckdes/Garmin';
+const BRANCH = 'main';
+const MANUAL_PATH = 'data/ernaehrung.csv';
+const GARMIN_PATH = 'data/garmin_kalorien.csv';
+const KCAL_PER_KG = 7700;
+const EMA_ALPHA = 0.1;          // Glättung Trendgewicht
+const MIN_DAYS = 7;             // ab hier vorläufiger Wert
+const SOLID_DAYS = 14;          // ab hier belastbarer Wert
+const CHART_DAYS = 90;          // so viele Tage in den Diagrammen
+const DEMO = new URLSearchParams(location.search).has('demo');
+
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem('ern_' + k); return v === null ? d : v; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('ern_' + k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem('ern_' + k); } catch (e) {} },
+};
+
+const settings = {
+  surplus: Number(LS.get('surplus', 200)),
+  window: Number(LS.get('window', 21)),
+  rateMin: Number(LS.get('rateMin', 0.25)),
+  rateMax: Number(LS.get('rateMax', 0.5)),
+};
+
+let manualRows = [];   // [{datum, gewicht_kg, kcal}]
+let garminRows = [];   // [{datum, gesamt_kcal, aktiv_kcal, grundumsatz_kcal}]
+let charts = {};
+
+// ---------------------------------------------------------------------------
+// Hilfsfunktionen
+// ---------------------------------------------------------------------------
+const nf0 = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 });
+const nf1 = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const nf2 = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtKcal = v => v == null ? '–' : nf0.format(v) + ' kcal';
+const fmtKg = v => v == null ? '–' : nf1.format(v) + ' kg';
+const signed = (v, f) => (v > 0 ? '+' : v < 0 ? '−' : '±') + f.format(Math.abs(v));
+
+function isoLocal(d) {
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+function addDays(iso, n) {
+  const d = new Date(iso + 'T12:00:00');
+  d.setDate(d.getDate() + n);
+  return isoLocal(d);
+}
+function dmy(iso) { return iso.slice(8, 10) + '.' + iso.slice(5, 7) + '.'; }
+function weekday(iso) { return ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][new Date(iso + 'T12:00:00').getDay()]; }
+function parseNum(s) {
+  if (s == null) return null;
+  s = String(s).trim().replace(/\s/g, '').replace(',', '.');
+  if (s === '') return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function parseCsv(text) {
+  const lines = text.replace(/\r/g, '').split('\n').filter(l => l.trim() !== '');
+  if (!lines.length) return [];
+  const head = lines[0].split(',').map(h => h.trim());
+  return lines.slice(1).map(l => {
+    const cells = l.split(',');
+    const o = {};
+    head.forEach((h, i) => { o[h] = (cells[i] ?? '').trim(); });
+    return o;
+  });
+}
+function manualToCsv(rows) {
+  const out = ['datum,gewicht_kg,kcal'];
+  [...rows].sort((a, b) => a.datum.localeCompare(b.datum)).forEach(r => {
+    out.push([r.datum, r.gewicht_kg ?? '', r.kcal ?? ''].join(','));
+  });
+  return out.join('\n') + '\n';
+}
+function normManual(rows) {
+  return rows.filter(r => /^\d{4}-\d{2}-\d{2}$/.test(r.datum)).map(r => ({
+    datum: r.datum,
+    gewicht_kg: parseNum(r.gewicht_kg) || null,
+    kcal: parseNum(r.kcal) || null,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// GitHub-Zugriff
+// ---------------------------------------------------------------------------
+function b64encode(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  bytes.forEach(b => { bin += String.fromCharCode(b); });
+  return btoa(bin);
+}
+function b64decode(b64) {
+  const bin = atob(b64.replace(/\n/g, ''));
+  return new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
+}
+function ghHeaders() {
+  const h = { 'Accept': 'application/vnd.github+json' };
+  const t = LS.get('token', '');
+  if (t) h['Authorization'] = 'Bearer ' + t;
+  return h;
+}
+async function ghGet(path) {
+  const url = `https://api.github.com/repos/${REPO}/contents/${path}?ref=${BRANCH}&t=${Date.now()}`;
+  const res = await fetch(url, { headers: ghHeaders(), cache: 'no-store' });
+  if (res.status === 404) return { text: '', sha: null };
+  if (!res.ok) throw new Error(`GitHub antwortet mit ${res.status} beim Lesen von ${path}`);
+  const j = await res.json();
+  return { text: b64decode(j.content || ''), sha: j.sha };
+}
+async function ghPut(path, text, sha, message) {
+  const body = { message, content: b64encode(text), branch: BRANCH };
+  if (sha) body.sha = sha;
+  const res = await fetch(`https://api.github.com/repos/${REPO}/contents/${path}`, {
+    method: 'PUT', headers: { ...ghHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = new Error(`GitHub antwortet mit ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+// Liest die aktuelle Datei, wendet `mutate` an und schreibt zurück (mit einem Wiederholungsversuch bei Konflikt).
+async function updateManual(mutate, message) {
+  if (DEMO) { mutate(manualRows); return; }
+  if (!LS.get('token', '')) throw new Error('Zum Speichern bitte unten unter „Einstellungen“ einmalig den GitHub-Token hinterlegen.');
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const cur = await ghGet(MANUAL_PATH);
+    const rows = normManual(parseCsv(cur.text));
+    mutate(rows);
+    try {
+      await ghPut(MANUAL_PATH, manualToCsv(rows), cur.sha, message);
+      manualRows = rows;
+      return;
+    } catch (e) {
+      if ((e.status === 409 || e.status === 422) && attempt === 0) continue;
+      if (e.status === 401) throw new Error('Token ungültig oder abgelaufen. Bitte unter „Einstellungen“ neu hinterlegen.');
+      if (e.status === 403 || e.status === 404) throw new Error('Token hat keine Schreibrechte auf das Repo „Garmin“ (Contents: Read and write).');
+      throw e;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Berechnung
+// ---------------------------------------------------------------------------
+function buildDays() {
+  const today = isoLocal(new Date());
+  const man = new Map(manualRows.map(r => [r.datum, r]));
+  const gar = new Map(garminRows.map(r => [r.datum, r]));
+  if (!manualRows.length) return [];
+  // Zeitraum: ab erstem eigenen Eintrag bis heute
+  const start = [...man.keys()].sort()[0];
+  const days = [];
+  for (let d = start; d <= today; d = addDays(d, 1)) {
+    const m = man.get(d) || {};
+    const g = gar.get(d) || {};
+    days.push({
+      datum: d,
+      w: m.gewicht_kg ?? null,
+      kcal: m.kcal ?? null,
+      gTotal: parseNum(g.gesamt_kcal) || null,
+      gActive: parseNum(g.aktiv_kcal) || null,
+      gBmr: parseNum(g.grundumsatz_kcal) || null,
+    });
+  }
+  // Trendgewicht (exponentiell geglättet)
+  let trend = null;
+  days.forEach(d => {
+    if (d.w != null) trend = trend == null ? d.w : trend + EMA_ALPHA * (d.w - trend);
+    d.trend = trend;
+  });
+  return days;
+}
+
+function slope(points) { // Ausgleichsgerade, kg pro Tag
+  const n = points.length;
+  if (n < 2) return null;
+  const mx = points.reduce((s, p) => s + p.x, 0) / n;
+  const my = points.reduce((s, p) => s + p.y, 0) / n;
+  let num = 0, den = 0;
+  points.forEach(p => { num += (p.x - mx) * (p.y - my); den += (p.x - mx) ** 2; });
+  return den === 0 ? null : num / den;
+}
+const avg = a => a.length ? a.reduce((s, v) => s + v, 0) / a.length : null;
+
+function estimate(days, endIdx, windowDays) {
+  const startIdx = Math.max(0, endIdx - windowDays + 1);
+  const slice = days.slice(startIdx, endIdx + 1);
+  const wPts = [], kcals = [], gTot = [], gBmr = [];
+  slice.forEach((d, i) => {
+    if (d.w != null) wPts.push({ x: i, y: d.w });
+    if (d.kcal != null) kcals.push(d.kcal);
+    if (d.gTotal != null) gTot.push(d.gTotal);
+    if (d.gBmr != null) gBmr.push(d.gBmr);
+  });
+  const n = Math.min(wPts.length, kcals.length);
+  const s = slope(wPts);
+  const intake = avg(kcals);
+  const res = {
+    n, nW: wPts.length, nK: kcals.length, span: slice.length,
+    slopeKgDay: s, intake, garmin: avg(gTot), garminBmr: avg(gBmr), nG: gTot.length,
+    tdee: null, quality: 'none',
+  };
+  if (n >= MIN_DAYS && s != null && intake != null) {
+    res.tdee = intake - s * KCAL_PER_KG;
+    res.quality = n >= SOLID_DAYS ? 'solid' : 'prelim';
+  }
+  return res;
+}
+
+// ---------------------------------------------------------------------------
+// Darstellung
+// ---------------------------------------------------------------------------
+function setText(id, txt) { document.getElementById(id).textContent = txt; }
+
+function render() {
+  const days = buildDays();
+  const W = settings.window;
+
+  if (!days.length) {
+    setText('sub', 'Noch keine Einträge – trag oben dein erstes Gewicht und deine Kalorien ein.');
+    document.getElementById('status').className = 'status';
+    document.getElementById('status').innerHTML = '<p>Sobald du 7 Tage lang Gewicht und Kalorien eingetragen hast, erscheint hier ein erster Wert für deinen Umsatz. Ab 14 Tagen ist er belastbar.</p>';
+    renderTable(days);
+    renderCharts(days, []);
+    renderKpis(null, null, days);
+    return;
+  }
+
+  // Letzter Tag mit eigenem Eintrag = Ende des Berechnungsfensters
+  let endIdx = days.length - 1;
+  while (endIdx > 0 && days[endIdx].w == null && days[endIdx].kcal == null) endIdx--;
+  const cur = estimate(days, endIdx, W);
+  const rate = estimate(days, endIdx, 28); // Zunahmetempo immer über 28 Tage
+
+  // Verlauf des geschätzten Umsatzes für das Diagramm
+  const tdeeSeries = days.map((d, i) => {
+    const e = estimate(days, i, W);
+    return e.tdee == null ? null : Math.round(e.tdee);
+  });
+
+  const first = days[0].datum, last = days[endIdx].datum;
+  setText('sub', `Eigene Einträge ${dmy(first)}–${dmy(last)} · ${manualRows.length} Tage erfasst · Garmin bis ${garminRows.length ? dmy(garminRows[garminRows.length - 1].datum) : '–'}`);
+
+  renderKpis(cur, rate, days);
+  renderStatus(cur, rate);
+  renderCharts(days, tdeeSeries, cur);
+  renderTable(days);
+}
+
+function renderKpis(cur, rate, days) {
+  const W = settings.window;
+  const lastTrend = days.length ? days[days.length - 1].trend : null;
+  setText('kTrend', fmtKg(lastTrend));
+  const lastW = [...days].reverse().find(d => d.w != null);
+  setText('kTrendHint', lastW ? `zuletzt gewogen: ${nf1.format(lastW.w)} kg (${dmy(lastW.datum)})` : '');
+
+  if (!cur) {
+    ['kTdee', 'kTarget', 'kRate', 'kIntake', 'kGarmin', 'kFactor', 'kBmr'].forEach(id => setText(id, '–'));
+    ['kTdeeHint', 'kTargetHint', 'kRateHint', 'kIntakeHint', 'kGarminHint', 'kFactorHint'].forEach(id => setText(id, ''));
+    return;
+  }
+  setText('kTdee', cur.tdee == null ? '–' : fmtKcal(Math.round(cur.tdee / 10) * 10));
+  setText('kTdeeHint', cur.quality === 'solid' ? `belastbar · ${cur.n} Tage` : cur.quality === 'prelim' ? `vorläufig · ${cur.n} von ${SOLID_DAYS} Tagen` : `noch ${MIN_DAYS - cur.n} Tage bis zum ersten Wert`);
+
+  const target = cur.tdee == null ? null : Math.round((cur.tdee + settings.surplus) / 10) * 10;
+  setText('kTarget', fmtKcal(target));
+  setText('kTargetHint', `Umsatz ${settings.surplus >= 0 ? '+' : '−'} ${nf0.format(Math.abs(settings.surplus))} kcal`);
+
+  if (rate.slopeKgDay != null && rate.nW >= MIN_DAYS) {
+    const perMonth = rate.slopeKgDay * 30.4;
+    setText('kRate', signed(perMonth, nf2) + ' kg');
+    setText('kRateHint', `Ziel: +${nf2.format(settings.rateMin)} bis +${nf2.format(settings.rateMax)} kg`);
+  } else {
+    setText('kRate', '–');
+    setText('kRateHint', `ab ${MIN_DAYS} Wiegungen`);
+  }
+
+  setText('kIntake', cur.intake == null ? '–' : fmtKcal(Math.round(cur.intake)));
+  setText('kIntakeHint', `${cur.nK} Tage, letzte ${W} Tage`);
+  setText('kGarmin', cur.garmin == null ? '–' : fmtKcal(Math.round(cur.garmin)));
+  setText('kGarminHint', cur.nG ? `${cur.nG} Tage, letzte ${W} Tage` : 'noch keine Garmin-Daten');
+  setText('kBmr', cur.garminBmr == null ? '–' : fmtKcal(Math.round(cur.garminBmr)));
+
+  if (cur.tdee != null && cur.garmin != null && cur.nG >= MIN_DAYS) {
+    const diffPct = (cur.garmin / cur.tdee - 1) * 100;
+    setText('kFactor', signed(diffPct, nf0) + ' %');
+    setText('kFactorHint', diffPct > 0 ? `überschätzt um ~${nf0.format(Math.round(cur.garmin - cur.tdee))} kcal/Tag` : `unterschätzt um ~${nf0.format(Math.round(cur.tdee - cur.garmin))} kcal/Tag`);
+  } else {
+    setText('kFactor', '–');
+    setText('kFactorHint', 'braucht Umsatz + 7 Tage Garmin');
+  }
+}
+
+function renderStatus(cur, rate) {
+  const el = document.getElementById('status');
+  const parts = [];
+  let cls = 'status';
+  if (cur.tdee == null) {
+    parts.push(`Noch zu wenig Daten: ${cur.nW} Wiegungen und ${cur.nK} Kalorientage im Zeitraum. Ab ${MIN_DAYS} Tagen mit beidem gibt es einen ersten Wert, ab ${SOLID_DAYS} Tagen einen belastbaren.`);
+  } else {
+    if (cur.quality === 'prelim') {
+      cls = 'status warn';
+      parts.push(`Vorläufiger Wert aus ${cur.n} Tagen. Noch etwa ${SOLID_DAYS - cur.n} Tage, dann ist er belastbar. Wasserschwankungen können ihn bis dahin noch deutlich verschieben.`);
+    } else {
+      cls = 'status ok';
+      parts.push(`Dein Umsatz liegt bei etwa <b>${nf0.format(Math.round(cur.tdee / 10) * 10)} kcal</b> pro Tag. Für dein Plus von ${nf0.format(settings.surplus)} kcal heißt das: <b>${nf0.format(Math.round((cur.tdee + settings.surplus) / 10) * 10)} kcal</b> pro Tag essen.`);
+    }
+  }
+  if (rate.slopeKgDay != null && rate.nW >= SOLID_DAYS) {
+    const pm = rate.slopeKgDay * 30.4;
+    if (pm > settings.rateMax + 0.1) {
+      cls = 'status warn';
+      parts.push(`Du nimmst gerade ${nf2.format(pm)} kg pro Monat zu – schneller als dein Ziel. Das ist dann meist mehr Fett als Muskel. Überlege, ca. 100 kcal pro Tag weniger zu essen.`);
+    } else if (pm < settings.rateMin - 0.1) {
+      parts.push(`Du nimmst gerade ${signed(pm, nf2)} kg pro Monat zu – langsamer als dein Ziel. Wenn das 2–3 Wochen so bleibt, erhöhe um ca. 100 kcal pro Tag.`);
+    } else {
+      parts.push(`Zunahmetempo ${signed(pm, nf2)} kg pro Monat – im Zielbereich.`);
+    }
+  }
+  if (!garminRows.length) {
+    parts.push('Garmin-Daten fehlen noch. Sie kommen beim nächsten automatischen Lauf (täglich ca. 6 Uhr) oder wenn du den Workflow auf GitHub manuell startest.');
+  }
+  el.className = cls;
+  el.innerHTML = parts.map(p => `<p>${p}</p>`).join('');
+}
+
+function renderCharts(days, tdeeSeries, cur) {
+  const from = Math.max(0, days.length - CHART_DAYS);
+  const d = days.slice(from);
+  const labels = d.map(x => dmy(x.datum));
+  const target = cur && cur.tdee != null ? Math.round(cur.tdee + settings.surplus) : null;
+
+  Chart.defaults.font.family = 'system-ui, -apple-system, sans-serif';
+  Chart.defaults.color = '#6b6a66';
+  const gridColor = '#e1e0d9';
+  const xScale = { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } };
+
+  Object.values(charts).forEach(c => c.destroy());
+
+  charts.w = new Chart(document.getElementById('weightChart'), {
+    type: 'line',
+    data: { labels, datasets: [
+      { label: 'Tageswert', data: d.map(x => x.w), showLine: false, pointRadius: 3, pointBackgroundColor: '#9a998f', borderColor: '#9a998f' },
+      { label: 'Trend', data: d.map(x => x.trend == null ? null : Math.round(x.trend * 100) / 100), borderColor: '#2a78d6', pointRadius: 0, borderWidth: 2, tension: 0.3 },
+    ] },
+    options: { responsive: true, maintainAspectRatio: false, spanGaps: true,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${c.dataset.label}: ${nf1.format(c.parsed.y)} kg` } } },
+      scales: { x: xScale, y: { grid: { color: gridColor }, title: { display: true, text: 'kg' } } } },
+  });
+
+  charts.k = new Chart(document.getElementById('kcalChart'), {
+    data: { labels, datasets: [
+      { type: 'bar', label: 'Gegessen', data: d.map(x => x.kcal), backgroundColor: '#eda10066', borderColor: '#eda100', borderWidth: 1, borderRadius: 4, maxBarThickness: 16, order: 3 },
+      { type: 'line', label: 'Garmin', data: d.map(x => x.gTotal), borderColor: '#9a998f', pointRadius: 0, borderWidth: 1.5, tension: 0.3, spanGaps: true, order: 2 },
+      { type: 'line', label: 'Dein Umsatz', data: tdeeSeries.slice(from), borderColor: '#1baf7a', pointRadius: 0, borderWidth: 2.5, tension: 0.3, spanGaps: true, order: 1 },
+      { type: 'line', label: 'Zielkalorien', data: d.map(() => target), borderColor: '#0b0b0b', borderDash: [5, 4], pointRadius: 0, borderWidth: 1.5, order: 0 },
+    ] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.parsed.y == null ? null : `${c.dataset.label}: ${nf0.format(c.parsed.y)} kcal` } } },
+      scales: { x: xScale, y: { beginAtZero: false, grid: { color: gridColor }, title: { display: true, text: 'kcal' } } } },
+  });
+}
+
+function renderTable(days) {
+  const tb = document.getElementById('tbody');
+  const rows = [...days].reverse().filter(d => d.w != null || d.kcal != null || d.gTotal != null).slice(0, 21);
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" class="muted">Noch keine Einträge.</td></tr>'; return; }
+  tb.innerHTML = rows.map(d => {
+    const diff = d.kcal != null && d.gTotal != null ? d.kcal - d.gTotal : null;
+    const hasManual = d.w != null || d.kcal != null;
+    return `<tr>
+      <td>${weekday(d.datum)} ${dmy(d.datum)}</td>
+      <td>${d.w != null ? nf1.format(d.w) : '<span class="muted">–</span>'}</td>
+      <td class="muted">${d.trend != null ? nf1.format(d.trend) : '–'}</td>
+      <td>${d.kcal != null ? nf0.format(d.kcal) : '<span class="muted">–</span>'}</td>
+      <td class="muted">${d.gTotal != null ? nf0.format(d.gTotal) : '–'}</td>
+      <td>${diff != null ? signed(diff, nf0) : '<span class="muted">–</span>'}</td>
+      <td><div class="row-actions">
+        <button class="ghost small" data-edit="${d.datum}">Bearbeiten</button>
+        ${hasManual ? `<button class="ghost small" data-del="${d.datum}">Löschen</button>` : ''}
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ---------------------------------------------------------------------------
+// Interaktion
+// ---------------------------------------------------------------------------
+function msg(id, text, kind) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'msg' + (kind ? ' ' + kind : '');
+}
+
+function fillForm(datum) {
+  const r = manualRows.find(x => x.datum === datum);
+  document.getElementById('fDate').value = datum;
+  document.getElementById('fWeight').value = r && r.gewicht_kg != null ? nf1.format(r.gewicht_kg) : '';
+  document.getElementById('fKcal').value = r && r.kcal != null ? String(r.kcal) : '';
+}
+
+document.getElementById('entryForm').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const datum = document.getElementById('fDate').value;
+  const w = parseNum(document.getElementById('fWeight').value);
+  const k = parseNum(document.getElementById('fKcal').value);
+  if (!datum) return msg('formMsg', 'Bitte ein Datum wählen.', 'err');
+  if (Number.isNaN(w) || (w != null && (w < 30 || w > 250))) return msg('formMsg', 'Gewicht bitte in kg, z. B. 82,4.', 'err');
+  if (Number.isNaN(k) || (k != null && (k < 0 || k > 10000))) return msg('formMsg', 'Kalorien bitte als Zahl, z. B. 2650.', 'err');
+  if (w == null && k == null) return msg('formMsg', 'Bitte Gewicht und/oder Kalorien eintragen.', 'err');
+
+  const btn = document.getElementById('fSave');
+  btn.disabled = true;
+  msg('formMsg', 'Speichere …');
+  try {
+    await updateManual(rows => {
+      let r = rows.find(x => x.datum === datum);
+      if (!r) { r = { datum, gewicht_kg: null, kcal: null }; rows.push(r); }
+      if (w != null) r.gewicht_kg = Math.round(w * 10) / 10;
+      if (k != null) r.kcal = Math.round(k);
+    }, `Eintrag ${datum}`);
+    msg('formMsg', `Gespeichert für den ${dmy(datum)}`, 'ok');
+    document.getElementById('fWeight').value = '';
+    document.getElementById('fKcal').value = '';
+    render();
+  } catch (e) {
+    msg('formMsg', e.message, 'err');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('tbody').addEventListener('click', async ev => {
+  const edit = ev.target.closest('[data-edit]');
+  const del = ev.target.closest('[data-del]');
+  if (edit) {
+    fillForm(edit.dataset.edit);
+    document.getElementById('entryForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  if (del) {
+    if (del.dataset.armed !== '1') { del.dataset.armed = '1'; del.textContent = 'Sicher?'; return; }
+    const datum = del.dataset.del;
+    del.disabled = true;
+    try {
+      await updateManual(rows => {
+        const i = rows.findIndex(x => x.datum === datum);
+        if (i >= 0) rows.splice(i, 1);
+      }, `Eintrag ${datum} gelöscht`);
+      msg('formMsg', `Eintrag vom ${dmy(datum)} gelöscht`, 'ok');
+      render();
+    } catch (e) {
+      msg('formMsg', e.message, 'err');
+      del.disabled = false;
+    }
+  }
+});
+
+function initSettings() {
+  const s = document.getElementById('sSurplus'), w = document.getElementById('sWindow');
+  const rmin = document.getElementById('sRateMin'), rmax = document.getElementById('sRateMax');
+  s.value = settings.surplus;
+  w.value = String(settings.window);
+  rmin.value = nf2.format(settings.rateMin);
+  rmax.value = nf2.format(settings.rateMax);
+  s.addEventListener('change', () => { const v = parseNum(s.value); if (v != null && !Number.isNaN(v)) { settings.surplus = v; LS.set('surplus', v); render(); } });
+  w.addEventListener('change', () => { settings.window = Number(w.value); LS.set('window', w.value); render(); });
+  rmin.addEventListener('change', () => { const v = parseNum(rmin.value); if (v != null && !Number.isNaN(v)) { settings.rateMin = v; LS.set('rateMin', v); render(); } });
+  rmax.addEventListener('change', () => { const v = parseNum(rmax.value); if (v != null && !Number.isNaN(v)) { settings.rateMax = v; LS.set('rateMax', v); render(); } });
+
+  const updTokenUi = () => {
+    const has = !!LS.get('token', '');
+    document.getElementById('tokenSummary').textContent = has ? 'Speichern ist eingerichtet ✓ (GitHub-Token)' : 'Speichern einrichten (GitHub-Token) – nötig zum Eintragen';
+    if (!has && !DEMO) document.getElementById('tokenBox').open = true;
+  };
+  document.getElementById('sTokenSave').addEventListener('click', async () => {
+    const t = document.getElementById('sToken').value.trim();
+    if (!t) return msg('tokenMsg', 'Bitte Token einfügen.', 'err');
+    LS.set('token', t);
+    msg('tokenMsg', 'Prüfe Token …');
+    try {
+      const res = await fetch(`https://api.github.com/repos/${REPO}`, { headers: ghHeaders(), cache: 'no-store' });
+      if (res.status === 401) throw new Error('Token ungültig.');
+      document.getElementById('sToken').value = '';
+      msg('tokenMsg', 'Token gespeichert. Schreibrechte werden beim ersten Speichern geprüft.', 'ok');
+    } catch (e) {
+      LS.del('token');
+      msg('tokenMsg', e.message, 'err');
+    }
+    updTokenUi();
+  });
+  document.getElementById('sTokenDel').addEventListener('click', () => {
+    LS.del('token');
+    msg('tokenMsg', 'Token aus diesem Browser entfernt.', 'ok');
+    updTokenUi();
+  });
+  updTokenUi();
+}
+
+// ---------------------------------------------------------------------------
+// Demo-Daten (Aufruf mit ?demo)
+// ---------------------------------------------------------------------------
+function demoData() {
+  const today = isoLocal(new Date());
+  const man = [], gar = [];
+  let seed = 7;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const n = 30;
+  for (let i = n; i >= 0; i--) {
+    const d = addDays(today, -i);
+    const t = n - i;
+    const realTdee = 2850;
+    const kcal = t < 14 ? 2850 + Math.round((rnd() - 0.5) * 500) : 3050 + Math.round((rnd() - 0.5) * 500);
+    const trueW = 80 + (t < 14 ? 0 : (t - 14) * 0.015);
+    const w = Math.round((trueW + (rnd() - 0.5) * 1.2) * 10) / 10;
+    man.push({ datum: d, gewicht_kg: rnd() < 0.9 ? w : null, kcal: rnd() < 0.92 && i > 0 ? kcal : null });
+    if (i > 0) {
+      const tot = Math.round(realTdee * 1.12 + (rnd() - 0.5) * 600);
+      gar.push({ datum: d, gesamt_kcal: String(tot), aktiv_kcal: String(tot - 1880), grundumsatz_kcal: '1880' });
+    }
+  }
+  return { man, gar };
+}
+
+// ---------------------------------------------------------------------------
+// Start
+// ---------------------------------------------------------------------------
+(async function init() {
+  document.getElementById('fDate').value = isoLocal(new Date());
+  initSettings();
+  if (DEMO) {
+    document.getElementById('demoBanner').hidden = false;
+    const d = demoData();
+    manualRows = d.man;
+    garminRows = d.gar;
+    render();
+    return;
+  }
+  try {
+    const [m, g] = await Promise.all([ghGet(MANUAL_PATH), ghGet(GARMIN_PATH)]);
+    manualRows = normManual(parseCsv(m.text));
+    garminRows = parseCsv(g.text).filter(r => r.datum).sort((a, b) => a.datum.localeCompare(b.datum));
+    render();
+  } catch (e) {
+    setText('sub', 'Daten konnten nicht geladen werden.');
+    const st = document.getElementById('status');
+    st.className = 'status bad';
+    st.innerHTML = `<p>${e.message}. Lade die Seite in ein paar Minuten neu.</p>`;
+  }
+})();
+</script>
+</body>
+</html>
