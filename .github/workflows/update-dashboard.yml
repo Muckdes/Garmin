@@ -34,8 +34,16 @@ jobs:
       - name: Dashboard neu aufbauen
         run: python build_dashboard.py --days 30 --data-dir garmin_data --out docs/index.html
 
+      - name: Neueste Einträge holen
+        # Falls du währenddessen Gewicht/Kalorien eingetragen hast, wird das
+        # vor dem Commit eingespielt, damit das Pushen nicht scheitert.
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase --autostash origin ${{ github.ref_name }}
+
       - name: Änderungen committen
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Dashboard automatisch aktualisiert"
-          file_pattern: "docs/index.html"
+          file_pattern: "docs/index.html data/garmin_kalorien.csv"
